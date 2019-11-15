@@ -1,0 +1,98 @@
+---
+- name: install wordpress
+  hosts: web
+  remote_user: root
+  
+  pre_tasks:
+     - name: install services
+       yum:
+          name: 
+            - httpd
+            - mariadb-server
+            - mariadb
+            - php
+            - php-common
+            - php-mysql 
+            - php-gd
+            - php-xml
+            - php-mbstring 
+            - php-mcrypt
+          state: present
+     - name: start and enabled services
+       service:
+            name:
+               - httpd
+               - mariadb-server
+               - mariadb
+               - php
+               - php-common
+               - php-mysql
+               - php-gd
+               - php-xml
+               - php-mbstring
+               - php-mcrypt
+            state: started
+            enabled: yes
+     - name: open firewall
+       firewalld:
+           service:
+               - http
+               - mariadb-server
+               - mariadb
+               - php
+               - php-common
+               - php-mysql
+               - php-gd
+               - php-xml
+               - php-mbstring
+               - php-mcrypt
+           permanent: yes
+           immediate: yes
+ 
+  tasks: 
+     - name: Create user to test database
+       mysql_user:
+           name: mysqladmin
+           password: "abc"
+           login_user: root
+           login_password: abc
+           state: present
+     - name: copy script.sh to serverx
+       copy:
+           src: /home/centos/script.sh
+           dest: /home/root/script.sh
+           owner: root
+           group: root
+           mode: '0777'
+     - name: execute script
+       script: /home/root/script.sh
+
+  post_tasks:
+     - name: curl
+       get_url:
+           url: https://wordpress.org/wordpress-5.0.tar.gz
+           dest: /home/root/wordpress
+     - name: tar file
+       unarchive:
+           src: /home/root/wordpress
+           dest: /var/www/html
+     - name: change owner file
+       file:
+           path: /var/www/html/wordpress
+           owner: apache
+           group: arpache
+           mode: '0755'
+     - name: make directory
+       file:
+           path: /var/www/html/wordpress/wp-content/uploads
+           state: directory
+           group: apache
+     - name: move file
+       copy:
+            src: /var/www/html/wordpress/wp-content-sample.php
+            dest: /var/www/html/wordpress/wp-config.php
+     - name: add data
+       lineinfile:
+            path: /var/www/html/wordpress/wp-config.php
+            line: "// ** MySQL settings - You can get this info from your web host ** // /** The name of the database for WordPress */ define('DB_NAME', 'wordpress'); /** MySQL database username */ define('DB_USER', 'ansible'); /** MySQL database password */ define('DB_PASSWORD', 'mypassword'); /** MySQL hostname */ define('DB_HOST', 'localhost');"
+...
